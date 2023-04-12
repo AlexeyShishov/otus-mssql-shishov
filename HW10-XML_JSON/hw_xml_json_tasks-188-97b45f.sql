@@ -43,9 +43,8 @@ USE WideWorldImporters
 
 
 --OPENXML
-
 DECLARE @xmlDocument XML,
-@docHandle INT;
+@dochandle INT;
 SELECT @xmlDocument = BulkColumn
 FROM OPENROWSET
 (BULK 'D:\Мое\SQL-Otus\lesson10_XML_JSON\StockItems-188-1fb5df.xml', 
@@ -92,10 +91,78 @@ i.Item.value('@Name[1]', 'nvarchar(100)') as [StockItemName]
 ,i.Item.value('IsChillerStock[1]', '[bit]') as IsChillerStock
 ,i.Item.value('TaxRate[1]', '[decimal](18, 3)') as TaxRate
 ,i.Item.value('UnitPrice[1]', '[decimal](18, 2)') as UnitPrice
+FROM @xmlDocument2.nodes('/StockItems/Item') as i(Item);
 
-FROM @xmlDocument2.nodes('/StockItems/Item') as i(Item)
-GO
+-- загрузка в Warehouse.StockItems
+DECLARE @srcxml XML,
+	@dochandle2 INT;
+SELECT @srcxml = BulkColumn
+FROM OPENROWSET
+(BULK 'D:\Мое\SQL-Otus\lesson10_XML_JSON\StockItems-188-1fb5df.xml', 
+ SINGLE_CLOB)
+AS data;
 
+EXEC sp_xml_preparedocument @docHandle2 OUTPUT, @srcxml;
+
+WITH datatable as 
+(SELECT *
+FROM OPENXML(@docHandle2, N'/StockItems/Item')
+WITH ( 
+	[StockItemName] [nvarchar](100) '@Name',
+	[SupplierID] [int] 'SupplierID',
+	[UnitPackageID] [int] 'Package/UnitPackageID',
+	[OuterPackageID] [int] 'Package/OuterPackageID',
+	[QuantityPerOuter] [int] 'Package/QuantityPerOuter',
+	[TypicalWeightPerUnit] [decimal](18, 3) 'Package/TypicalWeightPerUnit',
+	[LeadTimeDays] [int] 'LeadTimeDays',
+	[IsChillerStock] [bit] 'IsChillerStock',
+	[TaxRate] [decimal](18, 3) 'TaxRate',
+	[UnitPrice] [decimal](18, 2) 'UnitPrice'
+	))
+
+MERGE WideWorldImporters.Warehouse.StockItems as si
+	USING datatable as src
+	ON (si.StockItemName = src.StockItemName)
+	WHEN MATCHED THEN UPDATE 
+		SET [SupplierID] = src.[SupplierID]
+      ,[UnitPackageID] = src.[UnitPackageID]
+      ,[OuterPackageID] = src.[OuterPackageID]
+      ,[LeadTimeDays] = src.[LeadTimeDays]
+      ,[QuantityPerOuter] = src.[QuantityPerOuter]
+      ,[IsChillerStock] = src.[IsChillerStock]
+      ,[TaxRate] = src.[TaxRate]
+      ,[UnitPrice] = src.[UnitPrice]
+      ,[TypicalWeightPerUnit] = src.[TypicalWeightPerUnit]
+	WHEN NOT MATCHED THEN INSERT
+		(
+		[StockItemName]
+		,[SupplierID]
+		,[UnitPackageID]
+		,[OuterPackageID]
+		,[LeadTimeDays]
+		,[QuantityPerOuter]
+		,[IsChillerStock]
+		,[TaxRate]
+		,[UnitPrice]
+		,[TypicalWeightPerUnit]
+		,[LastEditedBy]
+	  )
+	  VALUES
+	  (
+	  src.[StockItemName]
+	  ,src.[SupplierID]
+	  ,src.[UnitPackageID]
+	  ,src.[OuterPackageID]
+	  ,src.[LeadTimeDays]
+	  ,src.[QuantityPerOuter]
+	  ,src.[IsChillerStock]
+	  ,src.[TaxRate]
+	  ,src.[UnitPrice]
+	  ,src.[TypicalWeightPerUnit]
+	  ,1
+	  );
+
+EXEC sp_xml_removedocument @docHandle2;
 /*
 2. Выгрузить данные из таблицы StockItems в такой же xml-файл, как StockItems.xml
 */
