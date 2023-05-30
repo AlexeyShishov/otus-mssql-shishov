@@ -22,7 +22,7 @@
 */
 
 /* скрипт для создания базы - частично сгенерирован MSSQL Studio
-Индексы созданя для полей, по которым чаще всего ожидаем поиск/джойн
+Индексы созданы для полей, по которым чаще всего ожидаем поиск/джойн для таблиц, где ожидается хотя бы 100 тысяч записей
 Ограничения на ввод - NOT NULL, местами CHECK/DEFAULT
 */
 
@@ -51,59 +51,59 @@ CREATE SCHEMA MainData;
 GO
 
 /* создаём справочники */
-CREATE TABLE [AShishov_project].RefBooks.DocTypes
+CREATE TABLE RefBooks.DocTypes
 (
 [ClientDocTypeID] int NOT NULL identity(1,1) CONSTRAINT PK_ClientDocs primary key,
 [DocTypeName] int NOT NULL,
 )
 
-CREATE TABLE [AShishov_project].RefBooks.ClientStatuses
+CREATE TABLE RefBooks.ClientStatuses
 (
 [ClientStatusID] int NOT NULL identity(1,1) CONSTRAINT PK_ClientStatuses primary key,
-[ClientStatus] int NOT NULL,
+[ClientStatus] nvarchar(30) NOT NULL,
 )
 
-CREATE TABLE [AShishov_project].RefBooks.OperTypes
+CREATE TABLE RefBooks.OperTypes
 (
 [OperTypeID] int NOT NULL identity(1,1) CONSTRAINT PK_OperTypes primary key,
 [OperType] nvarchar(30) NOT NULL,
 )
 
-CREATE TABLE [AShishov_project].RefBooks.PaymentTypes
+CREATE TABLE RefBooks.PaymentTypes
 (
 [PaymentTypeID] int NOT NULL identity(1,1) CONSTRAINT PK_PaymentTypes primary key,
 [PaymentTypes] nvarchar(30) NOT NULL,
 )
 
-CREATE TABLE [AShishov_project].RefBooks.PayPeriodTypes
+CREATE TABLE RefBooks.PayPeriodTypes
 (
 [PayPeriodTypeID] int NOT NULL identity(1,1) CONSTRAINT PK_PayPeriodTypes primary key,
 [PayPeriodType] nvarchar(30) NOT NULL,
 )
 
-CREATE TABLE [AShishov_project].RefBooks.AssetTypes
+CREATE TABLE RefBooks.AssetTypes
 (
 [AssetTypeID] int NOT NULL identity(1,1) CONSTRAINT PK_AssetTypeTypes primary key,
 [AssetType] nvarchar(30) NOT NULL,
 )
 
-CREATE TABLE [AShishov_project].RefBooks.Tariffs
+CREATE TABLE RefBooks.Tariffs
 (
 [TariffID] int NOT NULL identity(1,1) CONSTRAINT PK_TariffID primary key,
 [TariffName] nvarchar(100) NOT NULL,
 )
 
 /* создаём таблицы с данными о клиентах */
-CREATE TABLE [AShishov_project].Clients.Clients
+CREATE TABLE Clients.Clients
 (
 [ClientID] int NOT NULL identity(1,1) CONSTRAINT PK_Clients primary key,
 [ShortName] nvarchar(50) NOT NULL,
 [Status] int REFERENCES RefBooks.ClientStatuses (ClientStatusID)
 )
-CREATE INDEX IDX_Clients ON [AShishov_project].Clients.Clients (ClientID,ShortName)
+CREATE INDEX IDX_Clients_ShortName ON Clients.Clients (ShortName)
 
 
-CREATE TABLE [AShishov_project].Clients.ClientsAddInfo
+CREATE TABLE Clients.ClientsAddInfo
 (
 [ClAddInfoID] int NOT NULL identity(1,1) CONSTRAINT PK_ClAddInfoID primary key,
 [ClientID] int REFERENCES Clients.Clients (ClientID),
@@ -122,10 +122,10 @@ CREATE TABLE [AShishov_project].Clients.ClientsAddInfo
 [TactAddr] xml NULL,
 [PropertyFlags] int NOT NULL
 )
-CREATE INDEX IDX_ClientsAddInf ON [AShishov_project].Clients.ClientsAddInfo (ClAddInfoID)
+CREATE INDEX IDX_ClientsAddInf_ClientID ON Clients.ClientsAddInfo (ClientID)
 
 
-CREATE TABLE [AShishov_project].Clients.ClientDocs
+CREATE TABLE Clients.ClientDocs
 (
 [ClientDocID] int NOT NULL identity(1,1) CONSTRAINT PK_ClientDocs primary key,
 [DocType] int NOT NULL REFERENCES RefBooks.DocTypes (ClientDocTypeID),
@@ -134,10 +134,10 @@ CREATE TABLE [AShishov_project].Clients.ClientDocs
 [DocIssueDate] datetime DEFAULT (getdate()) NOT NULL,
 [DocValidToDate] datetime DEFAULT (getdate()) NOT NULL
 )
-CREATE INDEX IDX_ClientDocs ON [AShishov_project].Clients.ClientDocs (ClientDocID,DocOwnerID)
+CREATE INDEX IDX_ClientDocs_DocOwnerID ON Clients.ClientDocs (DocOwnerID)
 
 
-CREATE TABLE [AShishov_project].Clients.Accounts
+CREATE TABLE Clients.Accounts
 (
 [AccountID] int NOT NULL identity(1,1) CONSTRAINT PK_AccountIDs primary key,
 [OwnerID] int REFERENCES Clients.Clients (ClientID) NOT NULL,
@@ -145,10 +145,11 @@ CREATE TABLE [AShishov_project].Clients.Accounts
 [DateStart] datetime DEFAULT (getdate()) NOT NULL,
 [DateEnd] datetime DEFAULT (getdate()) NOT NULL
 )
-CREATE INDEX IDX_ClientAccounts ON [AShishov_project].Clients.Accounts (AccountID,DocName,OwnerID)
+CREATE INDEX IDX_ClientAccounts_DocName ON Clients.Accounts (DocName)
+CREATE INDEX IDX_ClientAccounts_OwnerID ON Clients.Accounts (OwnerID)
 
 
-CREATE TABLE [AShishov_project].Clients.ClientTariffs
+CREATE TABLE Clients.ClientTariffs
 (
 [ClientTariffID] int NOT NULL identity(1,1) CONSTRAINT PK_ClientTariffs primary key,
 [ClientID] int REFERENCES Clients.Clients (ClientID) NOT NULL,
@@ -158,19 +159,18 @@ CREATE TABLE [AShishov_project].Clients.ClientTariffs
 [AccCredit] int REFERENCES Clients.Accounts (AccountID),
 [AccPayments] int REFERENCES Clients.Accounts (AccountID)
 )
-CREATE INDEX IDX_ClientTariffs ON [AShishov_project].Clients.ClientTariffs (ClientTariffID,ClientID,TariffID)
+CREATE INDEX IDX_ClientTariffs_ClientID ON Clients.ClientTariffs (ClientID)
+CREATE INDEX IDX_ClientTariffs_TariffID ON Clients.ClientTariffs (TariffID)
 
 
 /* создаём таблицы с общими данными */
-CREATE TABLE [AShishov_project].MainData.Assets
+CREATE TABLE MainData.Assets
 (
 [AssetID] int NOT NULL identity(1,1) CONSTRAINT PK_Assets primary key,
 [ShortName] nvarchar(50) NOT NULL
 )
-CREATE INDEX IDX_Assets ON [AShishov_project].MainData.Assets (AssetID,ShortName)
 
-
-CREATE TABLE [AShishov_project].MainData.AssetsAddInfo
+CREATE TABLE MainData.AssetsAddInfo
 (
 [AssetAddInfoID] int NOT NULL identity(1,1) CONSTRAINT PK_AssetAddInfoID primary key,
 [AssetID] int REFERENCES MainData.Assets (AssetID),
@@ -182,10 +182,8 @@ CREATE TABLE [AShishov_project].MainData.AssetsAddInfo
 [AssetType] int REFERENCES RefBooks.AssetTypes (AssetTypeID),
 [IsDocumentary] bit NULL
 )
-CREATE INDEX IDX_AssetsAddInfo ON [AShishov_project].MainData.AssetsAddInfo (AssetID,ShortName,ISIN)
 
-
-CREATE TABLE [AShishov_project].MainData.Operations
+CREATE TABLE MainData.Operations
 (
 [OperationID] int NOT NULL identity(1,1) CONSTRAINT PK_Operations primary key,
 [OperType] int NOT NULL REFERENCES RefBooks.OperTypes (OperTypeID),
@@ -201,10 +199,11 @@ CREATE TABLE [AShishov_project].MainData.Operations
 [PriceAsset] int NOT NULL REFERENCES MainData.Assets (AssetID),
 [IsCanceled] bit DEFAULT (0) NOT NULL
 )
-CREATE INDEX IDX_Operations ON [AShishov_project].MainData.Operations (OperationID,Asset,Comment)
 
+CREATE INDEX IDX_Operations_Asset ON MainData.Operations (Asset)
+CREATE INDEX IDX_Operations_Comment ON MainData.Operations (Comment)
 
-CREATE TABLE [AShishov_project].MainData.AccountBalances
+CREATE TABLE MainData.AccountBalances
 (
 [ID] int NOT NULL identity(1,1) CONSTRAINT PK_Balances primary key,
 [AccountID] int REFERENCES Clients.Accounts (AccountID) NOT NULL,
@@ -212,10 +211,11 @@ CREATE TABLE [AShishov_project].MainData.AccountBalances
 [BalanceDate] datetime DEFAULT (getdate()) NOT NULL,
 [BalanceValue] money DEFAULT (0) NOT NULL
 )
-CREATE INDEX IDX_Balances ON [AShishov_project].MainData.AccountBalances (AccountID,AssetID,BalanceDate)
+CREATE INDEX IDX_Balances_AccountID ON MainData.AccountBalances (AccountID)
+CREATE INDEX IDX_Balances_AssetID ON MainData.AccountBalances (AssetID)
+CREATE INDEX IDX_Balances_BalanceDate ON MainData.AccountBalances (BalanceDate)
 
-
-CREATE TABLE [AShishov_project].MainData.TariffServices
+CREATE TABLE MainData.TariffServices
 (
 [ServiceID] int NOT NULL identity(1,1) CONSTRAINT PK_Services primary key,
 [TariffID] int REFERENCES Refbooks.Tariffs (TariffID) NOT NULL,
@@ -223,7 +223,7 @@ CREATE TABLE [AShishov_project].MainData.TariffServices
 [PayPeriodType] int REFERENCES RefBooks.PayPeriodTypes (PayPeriodTypeID) NOT NULL,
 [Rate] Float DEFAULT (0) NOT NULL
 )
-CREATE INDEX TariffServices ON [AShishov_project].MainData.TariffServices (TariffID,PaymentType,PayPeriodType)
+
 /*
 DROP DATABASE [AShishov_project] 
 GO

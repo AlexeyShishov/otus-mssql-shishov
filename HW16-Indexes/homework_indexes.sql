@@ -6,17 +6,30 @@
 
 -- Сначала нужно выполнить запросы из Create_DB.sql , это файл для создания БД к проекту, индексы создаются в основном скрипте
 
--- для отображения плана в текстовом виде
---SET STATISTICS PROFILE ON
---GO
---Тестовые запросы, можно прогонять и на пустой БД, без данных
+
 
 USE AShishov_project
 GO
-SELECT top (10) * FROM Clients.Clients WHERE ShortName = 'Иванов А.А.'
-SELECT top (10) * FROM MainData.Operations
-SELECT top (10) * FROM RefBooks.Tariffs
 
--- выключить настройки из начала скрипта
---SET STATISTICS PROFILE OFF
---GO
+INSERT INTO [RefBooks].[ClientStatuses]
+           ([ClientStatus])
+     VALUES
+           ('New'),('Active'),('Closed'),('Limited'),('Opening'),('Closing')
+GO
+
+--возьмём тестовые данные из WideWorldImporters
+INSERT INTO [Clients].[Clients] ([ShortName], [Status])
+     SELECT CustomerName, 2 FROM [WideWorldImporters].[Sales].[Customers]
+GO
+
+INSERT INTO [Clients].[Accounts]
+           ([OwnerID], [DocName], [DateEnd])
+
+           SELECT ClientID 
+           ,Cast (ClientID as nvarchar) +'\0001'
+           ,'2030-01-01' FROM Clients.Clients WHERE ShortName = 'Philip Walker'
+GO
+
+--в данно запросе планировщик показывал использование Index Seek
+SELECT * FROM Clients.Clients WHERE ShortName = 'Philip Walker'
+SELECT * FROM Clients.Accounts accs LEFT JOIN Clients.Clients as c on accs.OwnerID = c.ClientID WHERE c.ShortName = 'Philip Walker'
